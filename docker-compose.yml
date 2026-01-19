@@ -1,0 +1,42 @@
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - gateway
+
+  gateway:
+    build: ./backend/gateway
+    ports:
+      - "8000:8000"
+    environment:
+      CATALOG_URL: http://catalog:8001
+    depends_on:
+      - catalog
+
+  catalog:
+    build: ./backend/catalog
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://catalog:catalog@catalog_db:5432/catalog
+    depends_on:
+      catalog_db:
+        condition: service_healthy
+
+  catalog_db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: catalog
+      POSTGRES_USER: catalog
+      POSTGRES_PASSWORD: catalog
+    volumes:
+      - catalog_data:/var/lib/postgresql/18/docker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalog"]
+      interval: 5s
+      retries: 5
+
+volumes:
+  catalog_data:
